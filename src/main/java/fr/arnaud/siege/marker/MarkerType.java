@@ -1,0 +1,11 @@
+package fr.arnaud.siege.marker;
+
+public enum MarkerType {
+    DEFENDERS_LOOT,
+    ATTACKERS_LOOT,
+    ATTACKERS_SPAWN_POINT,
+    DEFENDERS_SPAWN_POINT,
+    WALL_DELIMITATION_NORTH,
+    WALL_DELIMITATION_EAST,
+    ATTACKERS_NPC_UPGRADE
+}
