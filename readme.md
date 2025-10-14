@@ -71,7 +71,7 @@ Two sides, one king. Defenders must build and protect. Attackers must break thro
 </p>
 
 <p align="center">
-  <img src="src/main/resources/images/border_particles.gif" alt="Border Particle Preview" width="600"/>
+  <img src="src/main/resources/images/border_particle_2.gif" alt="Border Particle Preview" width="600"/>
 </p>
 
 <p align="center">
