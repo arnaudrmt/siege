@@ -30,15 +30,10 @@ public class FightingState implements GameState, Listener {
         plugin.getLogger().info("Entering Fighting State...");
 
         Bukkit.getServer().getPluginManager().registerEvents(this, plugin);
-
-        plugin.getStateProtectionListener().disableAllProtections();
     }
 
     @Override
-    public void onUpdate(long elapsedTime) {
-
-
-    }
+    public void onUpdate(long elapsedTime) {}
 
     private void checkWinCondition() {
 
@@ -105,8 +100,12 @@ public class FightingState implements GameState, Listener {
         plugin.getLogger().info("Exiting Fighting State");
     }
 
+    @Override public boolean canBreakBlocks() { return true; }
+    @Override public boolean canPlaceBlocks() { return true; }
+    @Override public boolean canReceiveDamage() { return true; }
+
     @Override
     public String getName() {
-        return this.getClass().getSimpleName().replace("State", "").toUpperCase();
+        return "FIGHTING";
     }
 }

@@ -8,6 +8,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class TeamManager {
 
@@ -102,6 +103,26 @@ public class TeamManager {
         Set<UUID> allDefenders = new HashSet<>(defenders);
         if (kingUUID != null) allDefenders.add(kingUUID);
         return Collections.unmodifiableSet(allDefenders);
+    }
+
+    public ArrayList<Player> getOnlineAttackers() {
+        return attackers.stream()
+                .map(Bukkit::getPlayer)
+                .filter(Objects::nonNull)
+                .filter(Player::isOnline).collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    public ArrayList<Player> getOnlineDefenders() {
+        List<Player> allDefenders = defenders.stream()
+                .map(Bukkit::getPlayer)
+                .filter(Objects::nonNull)
+                .filter(Player::isOnline)
+                .collect(Collectors.toList());
+
+        if (kingUUID != null && Bukkit.getPlayer(kingUUID) != null && Bukkit.getPlayer(kingUUID).isOnline()) {
+            allDefenders.add(Bukkit.getPlayer(kingUUID));
+        }
+        return new ArrayList<>(allDefenders);
     }
 
     public void removePlayer(Player player) {

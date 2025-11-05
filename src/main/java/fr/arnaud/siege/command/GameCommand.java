@@ -15,23 +15,27 @@ public class GameCommand implements CommandExecutor {
 
         if(!(sender instanceof Player) || !sender.hasPermission("siege.game")) {
             sender.sendMessage(ChatColor.RED + "You cannot execute this command.");
-            return false;
+            return true;
         }
 
+        Player player = (Player) sender;
+
         if(args.length != 1) {
-            sender.sendMessage(ChatColor.RED + "Wrong Syntax: /siege <start/stop>.");
-            return false;
+            player.sendMessage(ChatColor.RED + "Wrong syntax: /siege <start|stop>.");
+            return true;
         }
 
         if(args[0].equalsIgnoreCase("start")) {
             Siege.getInstance().getGameManager().changeState(new PreparationState(Siege.getInstance()));
+            player.sendMessage(ChatColor.GREEN + "You have successfully started the game!");
+            return true;
         } else if(args[0].equalsIgnoreCase("stop")) {
             Siege.getInstance().getGameManager().shutdown();
-        } else {
-            sender.sendMessage(ChatColor.RED + "Wrong Syntax: /siege <start/stop>.");
-            return false;
+            player.sendMessage(ChatColor.RED + "You have shitdown the game.");
+            return true;
         }
 
-        return false;
+        sender.sendMessage(ChatColor.RED + "Wrong syntax: /siege <start|stop>.");
+        return true;
     }
 }

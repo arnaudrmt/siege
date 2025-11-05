@@ -2,7 +2,7 @@ package fr.arnaud.siege.game.state;
 
 import fr.arnaud.siege.Siege;
 import fr.arnaud.siege.game.GameState;
-import fr.arnaud.siege.util.Title;
+import fr.arnaud.siege.utils.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.event.HandlerList;
@@ -24,7 +24,6 @@ public class LobbyState implements GameState, Listener {
         countdown = LOBBY_COUNTDOWN_SECONDS;
         plugin.getLogger().info("Entering LOBBY state. Waiting for players...");
         Bukkit.getServer().getPluginManager().registerEvents(this, plugin);
-        plugin.getStateProtectionListener().enableAllProtections();
     }
 
     @Override
@@ -39,9 +38,8 @@ public class LobbyState implements GameState, Listener {
 
         countdown--;
 
-        Bukkit.getOnlinePlayers()
-                .forEach(player ->
-                        Title.sendActionBar(player, ChatColor.RED + "Game starting in " + countdown + " seconds!"));
+        Bukkit.getOnlinePlayers().forEach(player ->
+                Title.sendActionBar(player, ChatColor.RED + "Game starting in " + countdown + " seconds!"));
 
         if(countdown <= 0) {
             plugin.getGameManager().changeState(new PreparationState(plugin));
@@ -54,8 +52,12 @@ public class LobbyState implements GameState, Listener {
         plugin.getLogger().info("Exiting LOBBY state");
     }
 
+    @Override public boolean canBreakBlocks() { return false; }
+    @Override public boolean canPlaceBlocks() { return false; }
+    @Override public boolean canReceiveDamage() { return false; }
+
     @Override
     public String getName() {
-        return this.getClass().getSimpleName().replace("State", "").toUpperCase();
+        return "LOBBY";
     }
 }

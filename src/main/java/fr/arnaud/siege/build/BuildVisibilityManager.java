@@ -1,30 +1,26 @@
 package fr.arnaud.siege.build;
 
 import fr.arnaud.siege.Siege;
-import fr.arnaud.siege.util.EffectUtil;
-import net.minecraft.server.v1_8_R3.*;
+import fr.arnaud.siege.game.TeamManager;
+import net.minecraft.server.v1_8_R3.EnumParticle;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_8_R3.util.CraftMagicNumbers;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class BuildVisibilityManager {
 
-    private final Siege plugin;
+    private final TeamManager teamManager;
     private final NavigableMap<Integer, List<GhostBlock>> hiddenBlocksByLayer = new TreeMap<>();
 
-    private BukkitRunnable revealingTask;
+    private BukkitTask revealingTask;
 
-    public BuildVisibilityManager(Siege plugin) {
-        this.plugin = plugin;
+    public BuildVisibilityManager(TeamManager teamManager) {
+        this.teamManager = teamManager;
     }
 
     public void addGhostBlock(Location location, Material type) {
@@ -42,13 +38,11 @@ public class BuildVisibilityManager {
         List<GhostBlock> layerBlocks = hiddenBlocksByLayer.get(y);
         if (layerBlocks == null) return;
 
-        layerBlocks.removeIf(block -> {
-            block.getLocation().setPitch(0);
-            block.getLocation().setYaw(0);
-            location.setPitch(0);
-            location.setYaw(0);
-            return block.getLocation().equals(location);
-        });
+        layerBlocks.removeIf(block ->
+                block.getLocation().getBlockX() == location.getBlockX() &&
+                        block.getLocation().getBlockY() == location.getBlockY() &&
+                        block.getLocation().getBlockZ() == location.getBlockZ()
+        );
 
         if (layerBlocks.isEmpty()) {
             hiddenBlocksByLayer.remove(y);
@@ -57,28 +51,14 @@ public class BuildVisibilityManager {
 
     public void revealBlockToAttackers(GhostBlock ghostBlock, List<Player> onlineAttackers) {
 
-        World world = ghostBlock.getLocation().getWorld();
-        WorldServer worldServer = ((CraftWorld) world).getHandle();
-
         Location location = ghostBlock.getLocation();
-        Material material = ghostBlock.getMaterial();
-
-        BlockPosition blockPosition = new BlockPosition(location.getBlockX(), location.getBlockY(), location.getBlockZ());
-        Block nmsBlock = CraftMagicNumbers.getBlock(material);
-        IBlockData blockData = nmsBlock.getBlockData();
-
-        PacketPlayOutBlockChange packet = new PacketPlayOutBlockChange(worldServer, blockPosition);
-        packet.block = blockData;
+        Material type = ghostBlock.getMaterial();
 
         onlineAttackers.forEach(player -> {
-
-                    ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packet);
-
-                    EffectUtil.sendParticles(player, EnumParticle.CRIT,
-                            location,
-                            0.3f, 0.3f, 0.3f,
-                            0.1f, 5, false);
-                });
+            Siege.getInstance().getNmsHandler().changeBlock(location, type, player);
+            Siege.getInstance().getNmsHandler().sendParticles(player, EnumParticle.CRIT,
+                    location, 0.3f, 0.3f, 0.3f, 0.1f, 5, false);
+        });
     }
 
     public void startLayeredReveal() {
@@ -87,31 +67,25 @@ public class BuildVisibilityManager {
 
         Iterator<Map.Entry<Integer, List<GhostBlock>>> layerIterator = hiddenBlocksByLayer.entrySet().iterator();
 
-        revealingTask = new BukkitRunnable() {
-
-            @Override
-            public void run() {
-                if (!layerIterator.hasNext()) {
-                    hiddenBlocksByLayer.clear();
-                    cancel();
-                    revealingTask = null;
-                    return;
-                }
-
-                Map.Entry<Integer, List<GhostBlock>> entry = layerIterator.next();
-                List<GhostBlock> layerBlocks = entry.getValue();
-
-                List<Player> onlineAttackers = plugin.getTeamManager().getAttackers().stream()
-                        .map(Bukkit::getPlayer)
-                        .filter(Objects::nonNull)
-                        .filter(Player::isOnline)
-                        .collect(Collectors.toList());
-
-                layerBlocks.forEach(block -> revealBlockToAttackers(block, onlineAttackers));
+        revealingTask = Bukkit.getScheduler().runTaskTimer(Siege.getInstance(), () -> {
+            if (!layerIterator.hasNext()) {
+                hiddenBlocksByLayer.clear();
+                revealingTask.cancel();
+                revealingTask = null;
+                return;
             }
-        };
 
-        revealingTask.runTaskTimer(plugin, 20L, 0L);
+            Map.Entry<Integer, List<GhostBlock>> entry = layerIterator.next();
+            List<GhostBlock> layerBlocks = entry.getValue();
+
+            List<Player> onlineAttackers = teamManager.getAttackers().stream()
+                    .map(Bukkit::getPlayer)
+                    .filter(Objects::nonNull)
+                    .filter(Player::isOnline)
+                    .collect(Collectors.toList());
+
+            layerBlocks.forEach(block -> revealBlockToAttackers(block, onlineAttackers));
+        }, 0L, 10L);
     }
 
     public void resetReveal() {

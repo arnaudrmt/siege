@@ -3,7 +3,8 @@ main: fr.arnaud.siege.Siege
 version: 1.0
 api-version: 1.8
 author: Arnaud
-description: A competitive minigame plugin for Minecraft servers
+description: A competitive minigame plugin.
 commands:
   siege:
     description: Used to start and stop the Siege game.
+    usage: /siege <start|stop>

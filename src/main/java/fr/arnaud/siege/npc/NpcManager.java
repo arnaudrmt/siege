@@ -1,90 +1,90 @@
 package fr.arnaud.siege.npc;
 
 import fr.arnaud.siege.Siege;
+import fr.arnaud.siege.npc.api.INpc;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NpcManager {
 
-    private final List<NpcPlayerEntity> npcs = Collections.synchronizedList(new ArrayList<>());
     private final Siege plugin;
 
-    private BukkitTask tracking;
+    private final Map<Integer, INpc> npcs = new ConcurrentHashMap<>();
+    private BukkitTask trackingTask;
 
     public NpcManager(Siege plugin) {
         this.plugin = plugin;
     }
 
-    public void spawnNpc(Collection<Player> players, String name, String skinValue, String skinSignature, Location location) {
+    public void spawnNpc(Collection<Player> players, String name, String skinValue, String skinSignature,
+                         Location location) {
 
-        NpcPlayerEntity npc = new NpcPlayerEntity(name, skinValue, skinSignature, location);
-        npcs.add(npc);
+        INpc npc = plugin.getNmsHandler().createNpc(name, skinValue, skinSignature, location);
+        npcs.put(npc.getEntityId(), npc);
 
-        npc.bulkSpawn(players);
+        npc.spawn(players);
 
-        lookAtPlayers();
+        if (trackingTask == null) {
+            startPlayerTracking();
+        }
     }
 
     public void removeAllNpc() {
 
-        Collection<Player> players = Bukkit.getOnlinePlayers().stream()
-                .filter(Objects::nonNull)
-                .filter(OfflinePlayer::isOnline)
-                .collect(Collectors.toList());
+        if (trackingTask != null) {
+            trackingTask.cancel();
+            trackingTask = null;
+        }
 
-        npcs.forEach(npc -> {
-            npc.bulkDelete(players);
-            npcs.remove(npc);
-        });
+        List<Player> onlinePlayers = new ArrayList<>(Bukkit.getOnlinePlayers());
+        for (INpc npc : npcs.values()) {
+            npc.destroy(onlinePlayers);
+        }
+        npcs.clear();
     }
 
-    public void lookAtPlayers() {
+    private void startPlayerTracking() {
+        trackingTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (npcs.isEmpty()) {
+                trackingTask.cancel();
+                trackingTask = null;
+                return;
+            }
 
-        if(tracking != null) return;
-
-        tracking = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            npcs.forEach(npc -> {
-                Bukkit.getOnlinePlayers().forEach(player -> {
-                    if (player.getLocation().distance(npc.getLocation()) < 10) {
-                        npc.lookAtPlayer(player);
+            for (INpc npc : npcs.values()) {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (player.getWorld().equals(npc.getLocation().getWorld()) &&
+                        player.getLocation().distanceSquared(npc.getLocation()) < 100) {
+                        npc.lookAt(player);
                     }
-                });
-            });
-        }, 0L, 1L);
+                }
+            }
+        }, 0L, 2L);
     }
 
     public void handleNpcClick(Player player, int entityId) {
-
-        NpcPlayerEntity npc = getNpcById(entityId);
+        INpc npc = getNpcById(entityId);
 
         if(npc != null) {
             player.sendMessage("You've clicked on an NPC.");
+            // Implement Upgrade logic
         }
     }
 
-    public NpcPlayerEntity getNpcById(int id) {
-        return npcs.stream()
-                .filter(npc -> npc.getEntityId() == id)
-                .findFirst()
-                .orElse(null);
+    public INpc getNpcById(int entityId) {
+        return npcs.get(entityId);
     }
 
-    public List<NpcPlayerEntity> getNpcs() {
-        return npcs;
+    public Collection<INpc> getNpcs() {
+        return Collections.unmodifiableCollection(npcs.values());
     }
 
-    public void cleanUp() {
-        Bukkit.getOnlinePlayers().forEach(player -> npcs.forEach(npc -> npc.deleteFor(player)));
-        if(tracking != null) {
-            tracking.cancel();
-            tracking = null;
-        }
-        npcs.clear();
+    public Collection<Integer> getNpcIds() {
+        return Collections.unmodifiableCollection(npcs.keySet());
     }
 }

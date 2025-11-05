@@ -22,8 +22,6 @@ public class EndState implements GameState, Listener {
 
         Bukkit.getServer().getPluginManager().registerEvents(this, plugin);
 
-        plugin.getStateProtectionListener().enableAllProtections();
-
         Bukkit.broadcastMessage("Game over! Server will shutdown in " + SHUTDOWN_DELAY_SECONDS + " seconds.");
     }
 
@@ -35,7 +33,6 @@ public class EndState implements GameState, Listener {
             Bukkit.broadcastMessage("Shutting down server now.");
             Bukkit.getServer().shutdown();
         } else {
-            // Optionally broadcast countdown every 5 seconds
             if (elapsedTime % 5 == 0) {
                 Bukkit.broadcastMessage("Server shutdown in " + (SHUTDOWN_DELAY_SECONDS - elapsedTime) + " seconds.");
             }
@@ -49,8 +46,12 @@ public class EndState implements GameState, Listener {
         plugin.getLogger().info("Exiting Fighting State");
     }
 
+    @Override public boolean canBreakBlocks() { return false; }
+    @Override public boolean canPlaceBlocks() { return false; }
+    @Override public boolean canReceiveDamage() { return false; }
+
     @Override
     public String getName() {
-        return this.getClass().getSimpleName().replace("State", "").toUpperCase();
+        return "END";
     }
 }

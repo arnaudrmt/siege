@@ -1,11 +1,13 @@
 package fr.arnaud.siege.marker;
 
+import fr.arnaud.siege.Siege;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
 
 import java.util.*;
+import java.util.logging.Level;
 
 public class MarkerManager {
 
@@ -25,8 +27,8 @@ public class MarkerManager {
                     MarkerType type = MarkerType.valueOf(name);
                     markers.get(type).add(armorStand.getLocation());
 
-                } catch (IllegalArgumentException ignored) {
-
+                } catch (IllegalArgumentException e) {
+                    Siege.getInstance().getLogger().log(Level.WARNING, "Could not create marker for type: " + name, e);
                 }
             }
         });

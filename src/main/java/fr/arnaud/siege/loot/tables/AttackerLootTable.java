@@ -23,7 +23,6 @@ public enum AttackerLootTable {
     IRON_PICKAXE(new LootItem(new ItemStack(Material.IRON_PICKAXE), 1, 1, 0.1)),
     DIAMOND_PICKAXE(new LootItem(new ItemStack(Material.DIAMOND_PICKAXE), 1, 1, 0.05)),
 
-    // Axes (same rarity as swords)
     WOOD_AXE(new LootItem(new ItemStack(Material.WOOD_AXE), 1, 1, 0.3)),
     STONE_AXE(new LootItem(new ItemStack(Material.STONE_AXE), 1, 1, 0.25)),
     GOLD_AXE(new LootItem(new ItemStack(Material.GOLD_AXE), 1, 1, 0.15)),

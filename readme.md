@@ -1,115 +1,45 @@
-# 🏰 Siege — Attackers vs Defenders
+<div align="center">
 
-![Java](https://img.shields.io/badge/Java-1.8%2B-blue?logo=java&logoColor=white)
-![Spigot](https://img.shields.io/badge/Spigot-1.8.8%2B-brightgreen?logo=spigot)
-![Status](https://img.shields.io/badge/Status-Experimental-orange)
+<!-- Replace this with a custom banner for your project -->
+![Siege Banner](https://placehold.co/800x200/d35400/ffffff?text=Siege&font=montserrat)
+
+![Java](https://img.shields.io/badge/Java-8-blue?logo=openjdk&logoColor=white)
+![Spigot API](https://img.shields.io/badge/Spigot-1.8.8-orange?logo=spigotmc)
 ![License](https://img.shields.io/badge/License-MIT-yellow?logo=opensourceinitiative)
 
-**A fast-paced PvP minigame for Spigot servers**  
-Two sides, one king. Defenders must build and protect. Attackers must break through and slay the king.
-> ⚠️ This plugin is experimental and intended for testing, prototyping, or forking — not production use.
+</div>
 
-![Siege Banner](https://placehold.co/800x200/8B0000/ffffff?text=SIEGE+GAME+PLUGIN&font=montserrat)
+**Siege** is my take on the classic attack/defend gamemode, built from the ground up as a complete Minecraft minigame.
 
 ---
 
-## 🕹️ Gameplay Overview
+## Showcase: The Gameplay Experience
 
-- 👑 **Defenders**
-    - Start inside the keep.
-    - Loot chests for weapons, armor, and resources.
-    - Build defensive walls within a restricted **cuboid region**.
-    - Protect the **King** at all costs.
-    - Can respawn after death.
+Siege is a round-based game pitting two teams against each other: the **Defenders**, who must protect their King, and the **Attackers**, who must eliminate him. The game is split into distinct phases, each with its own unique mechanics and objectives.
 
-- ⚔️ **Attackers**
-    - Begin outside the castle.
-    - Loot chests for weapons, armor, and tools.
-    - Break through walls and **invade** after the timer ends.
-    - Cannot respawn — every life counts.
-    - Victory by **killing the King**.
-
-- ⏳ **Match Flow**
-    1. **Prep Phase** (5 min): Attackers loot, defenders build.
-    2. **Siege Phase**: Attackers advance and attempt to breach.
-    3. **End**: Game ends when the King dies, every attackers is slayed or time runs out.
+| Gameplay Moment                                                   | Description                                                                                                                                                                                                                                 |
+|:------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ![Defender Building](.github/assets/defender_building.gif)        | **Phase 1: The Build-Up.** Defenders frantically build their masterpiece inside a designated zone, marked out by a real-time particle wall. It's a race against the clock to create the most impenetrable fortress possible.                |
+| ![Breaking Though Wall](.github/assets/breaking_through_wall.gif) | **Phase 2: The Assault!** The fight is on. Attackers must breach the walls and hunt the King. While Defenders can respawn, the Attackers and the King only have one life each, making every encounter a high-stakes moment.                 
+| ![NPC Interaction](.github/assets/npc_interaction.gif)            | **Custom NPC Interaction:** The world is populated with custom, server-side NPCs for gameplay functions like shops or upgrades. These NPCs are fully interactive, feature custom skins, and intelligently track and look at nearby players. |
 
 ---
 
-## 🧱 Key Features
+## Features
 
-- 🧭 **Cuboid-Restricted Building** — Defenders can only build inside a clearly visualized wall zone.
-- 🧍 **Blacksmith NPC** — A custom NMS entity acts as the blacksmith. He can upgrade weapons and armors.
-- 🧠 **Dynamic Loot System** — Randomized, weighted loot tables for unique game experiences.
-- 💥 **Attackers vs Defenders** — Simple but tense team gameplay.
-- 🌍 **Protected World** — No mob spawns, no weather, no random griefing. Pure controlled gameplay.
-- 🧊 **Particle Wall Preview** — Real-time visualization of the building boundary.
+This project was built with a focus on creating a stable, maintainable, and extensible foundation. Here are the core architectural and gameplay systems:
 
----
+*   **Core Architecture**
+    *   **State-Driven Game Logic:** The game's lifecycle is managed by a Finite State Machine (`GameStateManager`). Each phase (`Lobby`, `Preparation`, `Fighting`, `End`) is an isolated state object, which simplifies logic, prevents state conflicts, and makes adding new phases straightforward.
+    *   **Decoupled Service Design:** Core functionalities are separated into distinct service classes (e.g., `PlayerSetupService`, `MapValidationService`). This keeps the game states clean and focused on coordination, adhering to the Single Responsibility Principle.
+    *   **Dependency Injection:** Dependencies between managers and services are handled through constructor injection, promoting modularity and avoiding the pitfalls of static access patterns.
 
-## 🧠 Tech Behind the Game
+*   **Version-Agnostic NMS & Packet Handling**
+    *   **NMS Abstraction Layer:** All version-specific code is isolated behind a custom `NMSHandler` interface. This allows the core plugin to remain version-agnostic, with support for new Minecraft versions added simply by creating a new handler implementation.
+    *   **Server-Side NPCs:** A lightweight, from-scratch NPC system handles spawning, custom skins, and player interaction. It uses `PacketPlayOutPlayerInfo` to manage skins and removes NPCs from the tablist to keep the UI clean.
+    *   **Packet-Based Block Invisibility:** The "Ghost Wall" is achieved by intercepting `PacketPlayOutBlockChange` packets to hide defender-placed blocks from attackers. A simple `PacketPlayOutBlockChange` packet is then used for a reliable and efficient reveal.
 
-- 🛰️ **NMS & Packet Interception**
-    - Used to create NPCs and handle interactions efficiently.
-    - Allows more precise control than Bukkit events alone.
-
-- 📦 **Cuboid Region Logic**
-    - Clean boundary calculations.
-    - Visual feedback with particles.
-    - Enforced building restrictions based on team & phase.
-
-- 🧱 **Custom Effects & UI**
-    - Action bar messages, titles, and particle effects for immersion.
-    - World control (no weather, explosions, or mobs) ensures consistent gameplay.
-
----
-
-## 🖼️ Gameplay Showcase
-
-<p align="center">
-  <img src="https://placehold.co/600x150/8B0000/ffffff?text=Border+Delimitations" alt="Border Delimitations" width="600"/>
-</p>
-
-<p align="center">
-  <img src="src/main/resources/images/border_particle_2.gif" alt="Border Particle Preview" width="600"/>
-</p>
-
-<p align="center">
-  <img src="https://placehold.co/600x150/8B0000/ffffff?text=Custom+Upgrade+NPC" alt="Custom Upgrade NPC Banner" width="600"/>
-</p>
-
-<p align="center">
-  <img src="src/main/resources/images/upgrade_loot_npc.png" alt="Upgrade NPC Screenshot" width="600"/>
-</p>
-
-<p align="center">
-  <img src="https://placehold.co/600x150/8B0000/ffffff?text=Custom+Loot+Tables" alt="Custom Loot Tables Banner" width="600"/>
-</p>
-
-<p align="center">
-  <img src="src/main/resources/images/custom_loot_table.png" alt="Custom Loot Table Screenshot" width="600"/>
-</p>
-
----
-
-## 🧭 Commands (Example)
-
-| Command                | Description                            |
-|-------------------------|------------------------------------------|
-| `/siege start`          | Starts a new siege game.               |
-| `/siege stop`           | Forces the game to stop.               |
-| `/siege team join <t>`  | Join a team (`attacker` / `defender`). |
-| `/siege king`           | Spawn or manage the King NPC.         |
-
----
-
-## 🧪 Development Notes
-
-- This project is a **proof of concept**.
-- Not a fully featured minigame — perfect for:
-    - Experimenting with **NMS**, packets & custom entities.
-    - Extending the gameplay loop.
-    - Forking and customizing.
-
-> Contributions and forks are welcome 🤝
-or extend at your own risk. Ideal for testing, not production servers.
+*   **Gameplay Systems**
+    *   **Procedural Build Zones:** The defender build area is not hard-coded. It is generated dynamically based on a single in-game marker, with particle boundaries providing clear visual feedback to players.
+    *   **Marker-Driven Map Configuration:** All key locations (spawns, chests, etc.) are defined by placing named Armor Stands. A `MarkerManager` scans these on startup, and a validation service ensures the map is correctly configured, preventing runtime errors.
+    *   **Configurable Weighted Loot:** A `LootGenerator` service populates chests based on YAML-defined loot tables, supporting weighted chances and item categories for easy balancing.

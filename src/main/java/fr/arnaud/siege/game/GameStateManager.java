@@ -1,7 +1,8 @@
 package fr.arnaud.siege.game;
 
 import fr.arnaud.siege.Siege;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitTask;
 
 public class GameStateManager {
 
@@ -10,7 +11,7 @@ public class GameStateManager {
     private GameState currentState;
     private long stateStartTime;
 
-    private BukkitRunnable updateTask;
+    private BukkitTask updateTask;
 
     private long stateDurationSeconds = 0;
 
@@ -26,17 +27,12 @@ public class GameStateManager {
 
         changeState(initialState);
 
-        updateTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                if(currentState != null) {
-                    stateDurationSeconds = (System.currentTimeMillis() - stateStartTime) / 1000;
-                    currentState.onUpdate(stateDurationSeconds);
-                }
+        updateTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if(currentState != null) {
+                stateDurationSeconds = (System.currentTimeMillis() - stateStartTime) / 1000;
+                currentState.onUpdate(stateDurationSeconds);
             }
-        };
-
-        updateTask.runTaskTimer(plugin, 0L, 20L);
+        }, 0L, 20L);
     }
 
     public void stop() {
@@ -63,5 +59,9 @@ public class GameStateManager {
 
     public long getStateDurationSeconds() {
         return stateDurationSeconds;
+    }
+
+    public GameState getCurrentState() {
+        return currentState;
     }
 }

@@ -1,12 +1,14 @@
 package fr.arnaud.siege.wall;
 
 import fr.arnaud.siege.Siege;
+import fr.arnaud.siege.game.TeamManager;
+import fr.arnaud.siege.marker.MarkerManager;
 import fr.arnaud.siege.marker.MarkerType;
-import fr.arnaud.siege.util.Cuboid;
+import fr.arnaud.siege.utils.Cuboid;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,11 +16,13 @@ import java.util.List;
 public class WallBuildManager {
 
     private final Siege plugin;
+    private final TeamManager teamManager;
+    private final MarkerManager markerManager;
 
     private static final int WALL_RADIUS = 5;
     private static final int MAX_BUILD_DISTANCE = 50;
 
-    private BukkitRunnable boundaryTask;
+    private BukkitTask boundaryTask;
 
     public enum WallDirection {
         NORTH, EAST
@@ -38,40 +42,45 @@ public class WallBuildManager {
         }
     }
 
-    public WallBuildManager(Siege plugin) {
+    public WallBuildManager(Siege plugin, TeamManager teamManager, MarkerManager markerManager) {
         this.plugin = plugin;
+        this.teamManager = teamManager;
+        this.markerManager = markerManager;
     }
 
-    public boolean isAllowed(Player player, Location checkLocation, ActionType type) {
-
-        if (type == ActionType.BLOCK && plugin.getTeamManager().isAttacker(player)) {
-            return false;
-        }
-
-        if (type == ActionType.MOVE && plugin.getTeamManager().isDefender(player)) {
-            return false;
-        }
-
+    public boolean isAllowed(Player player, Location location, ActionType type) {
         MarkerData markerData = getWallMarker();
+        if (markerData == null) return true;
 
-        if (markerData == null) {
+        boolean isWithinBuildZone = isWithinAllowedArea(location, markerData.location, markerData.direction);
+        boolean isAttacker = plugin.getTeamManager().isAttacker(player);
+
+        if (isAttacker && type == ActionType.BLOCK) {
+            return false;
+        }
+
+        if (!isAttacker && type == ActionType.BLOCK) {
+            return isWithinBuildZone;
+        }
+
+        if (isAttacker && type == ActionType.MOVE) {
+            return !isWithinBuildZone;
+        }
+
+        if(!isAttacker && type == ActionType.MOVE) {
             return true;
         }
 
-        return isWithinAllowedArea(checkLocation, markerData.location, markerData.direction);
+        return true;
     }
 
     private MarkerData getWallMarker() {
         List<Location> eastMarkers = plugin.getMarkerManager().getMarkers(MarkerType.WALL_DELIMITATION_EAST);
-        List<Location> northMarkers = plugin.getMarkerManager().getMarkers(MarkerType.WALL_DELIMITATION_NORTH);
-
-        if (!eastMarkers.isEmpty() && !northMarkers.isEmpty()) {
-            plugin.getLogger().warning("Both EAST and NORTH wall markers found, defaulting to EAST.");
-        }
-
         if (!eastMarkers.isEmpty()) {
             return new MarkerData(eastMarkers.get(0), WallDirection.EAST);
         }
+
+        List<Location> northMarkers = plugin.getMarkerManager().getMarkers(MarkerType.WALL_DELIMITATION_NORTH);
         if (!northMarkers.isEmpty()) {
             return new MarkerData(northMarkers.get(0), WallDirection.NORTH);
         }
@@ -104,27 +113,23 @@ public class WallBuildManager {
             boundaryTask.cancel();
         }
 
-        boundaryTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                Location markerLoc = getCurrentMarkerLocation();
-                WallDirection direction = getCurrentMarkerDirection();
+        boundaryTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            Location markerLoc = getCurrentMarkerLocation();
+            WallDirection direction = getCurrentMarkerDirection();
 
-                if (markerLoc == null || direction == null) {
-                    plugin.getLogger().warning("Wall marker not found, cannot show boundaries.");
-                    return;
-                }
-
-                Location corner1 = calculateFirstCorner(markerLoc, direction);
-                Location corner2 = calculateSecondCorner(markerLoc, direction);
-
-                Cuboid wallCuboid = new Cuboid(corner1, corner2);
-
-                WallBoundaryVisualizer.displayFullBoundary(markerLoc, wallCuboid, new ArrayList<>(Bukkit.getOnlinePlayers()));
+            if (markerLoc == null || direction == null) {
+                plugin.getLogger().warning("Wall marker not found, cannot show boundaries.");
+                return;
             }
-        };
 
-        boundaryTask.runTaskTimer(plugin, 0L, 20L);
+            Location corner1 = calculateFirstCorner(markerLoc, direction);
+            Location corner2 = calculateSecondCorner(markerLoc, direction);
+
+            Cuboid wallCuboid = new Cuboid(corner1, corner2);
+
+            WallBoundaryVisualizer.displayFullBoundary(markerLoc, wallCuboid, new ArrayList<>(Bukkit.getOnlinePlayers()));
+
+        }, 0L, 20);
     }
 
     public void stopShowingBoundaries() {

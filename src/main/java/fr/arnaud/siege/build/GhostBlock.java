@@ -15,7 +15,7 @@ public class GhostBlock {
     }
 
     public Location getLocation() {
-        return location;
+        return location.clone();
     }
 
     public Material getMaterial() {
