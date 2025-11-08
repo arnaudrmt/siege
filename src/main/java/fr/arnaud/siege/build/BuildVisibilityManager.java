@@ -3,9 +3,7 @@ package fr.arnaud.siege.build;
 import fr.arnaud.siege.Siege;
 import fr.arnaud.siege.game.TeamManager;
 import net.minecraft.server.v1_8_R3.EnumParticle;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -63,28 +61,36 @@ public class BuildVisibilityManager {
 
     public void startLayeredReveal() {
 
-        if (hiddenBlocksByLayer.isEmpty() || revealingTask != null) return;
-
         Iterator<Map.Entry<Integer, List<GhostBlock>>> layerIterator = hiddenBlocksByLayer.entrySet().iterator();
+
+        final Set<Chunk> chunksToRefresh = new HashSet<>();
 
         revealingTask = Bukkit.getScheduler().runTaskTimer(Siege.getInstance(), () -> {
             if (!layerIterator.hasNext()) {
-                hiddenBlocksByLayer.clear();
                 revealingTask.cancel();
                 revealingTask = null;
+
+                List<Player> onlineAttackers = teamManager.getOnlineAttackers();
+                if (!onlineAttackers.isEmpty()) {
+                    World world = onlineAttackers.get(0).getWorld();
+                    chunksToRefresh.forEach(chunk -> {
+                        world.refreshChunk(chunk.getX(), chunk.getZ());
+                    });
+                }
+
+                hiddenBlocksByLayer.clear();
                 return;
             }
 
             Map.Entry<Integer, List<GhostBlock>> entry = layerIterator.next();
             List<GhostBlock> layerBlocks = entry.getValue();
+            List<Player> onlineAttackers = teamManager.getOnlineAttackers();
+            if (onlineAttackers.isEmpty()) return;
 
-            List<Player> onlineAttackers = teamManager.getAttackers().stream()
-                    .map(Bukkit::getPlayer)
-                    .filter(Objects::nonNull)
-                    .filter(Player::isOnline)
-                    .collect(Collectors.toList());
-
-            layerBlocks.forEach(block -> revealBlockToAttackers(block, onlineAttackers));
+            layerBlocks.forEach(block -> {
+                revealBlockToAttackers(block, onlineAttackers);
+                chunksToRefresh.add(block.getLocation().getChunk());
+            });
         }, 0L, 10L);
     }
 
@@ -100,5 +106,24 @@ public class BuildVisibilityManager {
         return hiddenBlocksByLayer.values().stream()
                 .flatMap(List::stream)
                 .anyMatch(ghostBlock -> ghostBlock.getLocation().equals(targetLocation));
+    }
+
+    public boolean chunkContainsHiddenBlocks(int chunkX, int chunkZ) {
+        return hiddenBlocksByLayer.values().stream()
+                .flatMap(List::stream)
+                .anyMatch(ghostBlock ->
+                        (ghostBlock.getLocation().getBlockX() >> 4) == chunkX &&
+                                (ghostBlock.getLocation().getBlockZ() >> 4) == chunkZ
+                );
+    }
+
+    public List<GhostBlock> getHiddenBlocksInChunk(int chunkX, int chunkZ) {
+        return hiddenBlocksByLayer.values().stream()
+                .flatMap(List::stream)
+                .filter(ghostBlock ->
+                        (ghostBlock.getLocation().getBlockX() >> 4) == chunkX &&
+                                (ghostBlock.getLocation().getBlockZ() >> 4) == chunkZ
+                )
+                .collect(Collectors.toList());
     }
 }

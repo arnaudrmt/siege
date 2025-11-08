@@ -12,6 +12,7 @@ import net.minecraft.server.v1_8_R3.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.craftbukkit.v1_8_R3.CraftChunk;
 import org.bukkit.craftbukkit.v1_8_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_8_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_8_R3.util.CraftMagicNumbers;
@@ -73,6 +74,58 @@ public class NMSHandler_v1_8_R3 implements NMSHandler {
                     if (plugin.getBuildVisibilityManager().containsHiddenBlockAt(loc)) {
                         return;
                     }
+                }
+
+                if (msg instanceof PacketPlayOutMapChunk) {
+                    PacketPlayOutMapChunk packet = (PacketPlayOutMapChunk) msg;
+
+                    Field chunkXField = packet.getClass().getDeclaredField("a");
+                    chunkXField.setAccessible(true);
+                    int chunkX = chunkXField.getInt(packet);
+
+                    Field chunkZField = packet.getClass().getDeclaredField("b");
+                    chunkZField.setAccessible(true);
+                    int chunkZ = chunkZField.getInt(packet);
+
+                    if (!plugin.getBuildVisibilityManager().chunkContainsHiddenBlocks(chunkX, chunkZ)) {
+                        super.write(ctx, msg, promise);
+                        return;
+                    }
+
+                    org.bukkit.Chunk bukkitChunk = player.getWorld().getChunkAt(chunkX, chunkZ);
+                    Chunk nmsChunk = ((CraftChunk) bukkitChunk).getHandle();
+
+                    Chunk clonedNmsChunk = new Chunk(nmsChunk.getWorld(), nmsChunk.locX, nmsChunk.locZ);
+
+                    for (int i = 0; i < nmsChunk.getSections().length; i++) {
+                        ChunkSection originalSection = nmsChunk.getSections()[i];
+                        if (originalSection != null) {
+
+                            char[] blockIdsClone = originalSection.getIdArray().clone();
+                            ChunkSection clonedSection = new ChunkSection(originalSection.getYPosition(), true, blockIdsClone);
+
+                            byte[] emittedLightData = originalSection.getEmittedLightArray().a();
+                            System.arraycopy(emittedLightData, 0, clonedSection.getEmittedLightArray().a(), 0, emittedLightData.length);
+
+                            if (originalSection.getSkyLightArray() != null) {
+                                byte[] skyLightData = originalSection.getSkyLightArray().a();
+                                System.arraycopy(skyLightData, 0, clonedSection.getSkyLightArray().a(), 0, skyLightData.length);
+                            }
+
+                            clonedNmsChunk.getSections()[i] = clonedSection;
+                        }
+                    }
+
+                    plugin.getBuildVisibilityManager().getHiddenBlocksInChunk(chunkX, chunkZ).forEach(ghostBlock -> {
+                        Location loc = ghostBlock.getLocation();
+                        BlockPosition pos = new BlockPosition(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+                        clonedNmsChunk.a(pos, Blocks.AIR.getBlockData());
+                    });
+
+                    PacketPlayOutMapChunk newPacket = new PacketPlayOutMapChunk(clonedNmsChunk, true, 65535);
+
+                    super.write(ctx, newPacket, promise);
+                    return;
                 }
 
                 super.write(ctx, msg, promise);

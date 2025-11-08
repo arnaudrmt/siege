@@ -40,7 +40,7 @@ tasks.withType<Jar> {
 tasks.register<Copy>("copyToServer") {
     dependsOn(tasks.jar)
 
-    val serverPluginsDir = file("/Users/arnaud/Desktop/Documents/Developpment/Minecraft Servers/1.8.8/plugins")
+    val serverPluginsDir = file("/Users/arnaud/Desktop/Documents/Developpment/Serveurs Minecraft/1.8.8/plugins")
 
     from(tasks.jar.get().archiveFile)
     into(serverPluginsDir)
